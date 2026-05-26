@@ -28,6 +28,16 @@ npm run process:sample
 
 Writes `output.json` to the current working directory and prints a summary.
 
+### Single-file version
+
+If you'd rather have everything in one self-contained file (no `src/`, no npm install), use [`process_json_test.single.js`](process_json_test.single.js). Zero dependencies, identical output:
+
+```bash
+node process_json_test.single.js ./fixtures/INVENTORY_C400.json
+```
+
+Copy that one file anywhere and it just works. The modular version under `src/` is still the recommended one for reading and extending the code.
+
 ### Example output
 
 ```
