@@ -1,0 +1,14 @@
+node_modules/
+coverage/
+output.json
+.DS_Store
+*.log
+npm-debug.log*
+.env
+.env.local
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+.venv/
+venv/

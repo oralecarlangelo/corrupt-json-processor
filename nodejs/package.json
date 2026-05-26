@@ -1,0 +1,36 @@
+{
+  "name": "json-processing-test-nodejs",
+  "version": "1.0.0",
+  "description": "Clean and validate a corrupted JSON inventory feed.",
+  "main": "process_json_test.js",
+  "bin": {
+    "process-inventory": "./process_json_test.js"
+  },
+  "scripts": {
+    "start": "node process_json_test.js",
+    "process:sample": "node process_json_test.js ./fixtures/INVENTORY_C400.json",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "json",
+    "etl",
+    "data-cleaning",
+    "inventory"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ]
+  }
+}
