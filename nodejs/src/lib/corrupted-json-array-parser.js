@@ -1,22 +1,23 @@
 'use strict';
 
 /**
- * Parse an array of JSON objects out of a possibly corrupted text blob.
+ * Salvage a sequence of JSON objects from a possibly corrupted text blob that
+ * is *supposed* to be a JSON array of objects but may be truncated mid-object
+ * or contain mid-stream malformed objects.
  *
- * The input is expected to look like a JSON array of objects, but the spec
- * guarantees it can be truncated mid-object at the end. Rather than relying
- * on JSON.parse for the whole document, we walk the text once, track brace
- * depth and string state, and emit each balanced top-level object. The
- * trailing partial object never reaches depth 0, so it is silently dropped.
+ * The algorithm is a single linear scan that tracks brace depth and string
+ * state. Each balanced top-level object is emitted; the trailing partial
+ * object never reaches depth 0, so it is silently discarded. Objects that
+ * exist structurally but fail JSON.parse are reported via `parseFailures`.
  *
- * Objects that exist structurally but fail JSON.parse (malformed mid-stream)
- * are also dropped — the caller can count them via the `parseFailures` return
- * value if needed.
+ * This module is domain-agnostic — it knows nothing about inventory.
  *
  * @param {string} text
  * @returns {{ records: object[], parseFailures: number }}
  */
 function parseCorruptedJsonArray(text) {
+    if (typeof text !== 'string') return { records: [], parseFailures: 0 };
+
     const records = [];
     let parseFailures = 0;
 
@@ -62,7 +63,6 @@ function parseCorruptedJsonArray(text) {
                 }
                 start = -1;
             } else if (depth < 0) {
-                // Unbalanced — reset and keep scanning.
                 depth = 0;
                 start = -1;
             }

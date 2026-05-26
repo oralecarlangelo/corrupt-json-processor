@@ -2,7 +2,7 @@
   "name": "json-processing-test-nodejs",
   "version": "1.0.0",
   "description": "Clean and validate a corrupted JSON inventory feed.",
-  "main": "process_json_test.js",
+  "main": "src/index.js",
   "bin": {
     "process-inventory": "./process_json_test.js"
   },

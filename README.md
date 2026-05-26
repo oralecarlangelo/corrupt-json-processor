@@ -26,9 +26,18 @@ The spec lets you complete the task in either Python or Node.js; this repo uses 
 ```bash
 cd nodejs
 npm install
-npm test                    # 38 tests, 100% coverage on src/
+npm test                    # 101 tests across 11 suites, 100% line + function coverage
 npm run process:sample      # process the bundled fixture
 ```
+
+## Architecture
+
+The Node.js solution is built in two layers:
+
+- **`src/lib/`** — domain-agnostic, reusable utilities: a corrupted-JSON parser, a generic `deduplicateBy(key, keepWhere)` engine, an HTML-tag stripper, validator/transform composers, and URL/file source loaders. None of them know anything about inventory.
+- **`src/inventory/`** — inventory-specific policy on top of the lib: one file per validation rule, one file per cleaning step, plus a thin `dedupe-by-sku` binding.
+
+`src/pipeline.js` wires them together; `process_json_test.js` is a thin CLI. Every public function is dependency-injectable for testing. See [nodejs/README.md](nodejs/README.md) for the full layout, SOLID notes, and rule tables.
 
 ## CI
 

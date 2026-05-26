@@ -3,64 +3,18 @@
 
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
-const http = require('http');
 
-const { parseCorruptedJsonArray } = require('./src/parser');
-const { processRecords } = require('./src/processor');
+const {
+    loadTextSource,
+    isHttpUrl,
+    parseCorruptedJsonArray,
+    processInventoryRecords,
+} = require('./src');
 
-const OUTPUT_FILE = 'output.json';
+const DEFAULT_OUTPUT_FILE = 'output.json';
 
-function isUrl(s) {
-    return /^https?:\/\//i.test(s);
-}
-
-function fetchUrl(url, redirectsRemaining = 5) {
-    return new Promise((resolve, reject) => {
-        const client = url.startsWith('https') ? https : http;
-        const req = client.get(url, (res) => {
-            if (
-                res.statusCode &&
-                res.statusCode >= 300 &&
-                res.statusCode < 400 &&
-                res.headers.location
-            ) {
-                if (redirectsRemaining <= 0) {
-                    reject(new Error('Too many redirects'));
-                    return;
-                }
-                res.resume();
-                resolve(fetchUrl(res.headers.location, redirectsRemaining - 1));
-                return;
-            }
-            if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-                reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-                return;
-            }
-            const chunks = [];
-            res.on('data', (c) => chunks.push(c));
-            res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-            res.on('error', reject);
-        });
-        req.on('error', reject);
-        req.setTimeout(60000, () => {
-            req.destroy(new Error('Request timed out after 60s'));
-        });
-    });
-}
-
-async function loadInput(source) {
-    if (isUrl(source)) {
-        process.stderr.write(`Fetching ${source.substring(0, 80)}${source.length > 80 ? '…' : ''}\n`);
-        return fetchUrl(source);
-    }
-    const resolved = path.resolve(source);
-    process.stderr.write(`Reading ${resolved}\n`);
-    return fs.readFileSync(resolved, 'utf8');
-}
-
-function printSummary(stats) {
-    const lines = [
+function formatSummary(stats) {
+    return [
         '',
         '=== Processing Summary ===',
         `Total records processed:        ${stats.totalProcessed}`,
@@ -68,34 +22,40 @@ function printSummary(stats) {
         `Duplicate SKUs handled:         ${stats.duplicatesHandled}`,
         `Records in final output:        ${stats.finalCount}`,
         '',
-    ];
-    process.stdout.write(lines.join('\n'));
+    ].join('\n');
 }
 
-async function main() {
-    const source = process.argv[2];
+function usage() {
+    return (
+        'Usage: node process_json_test.js <URL_or_file_path> [output_file]\n' +
+        'Example: node process_json_test.js https://example.com/inventory.json\n' +
+        '         node process_json_test.js ./fixtures/INVENTORY_C400.json out.json\n'
+    );
+}
+
+async function main(argv = process.argv) {
+    const source = argv[2];
+    const outputFile = argv[3] ?? DEFAULT_OUTPUT_FILE;
+
     if (!source) {
-        process.stderr.write(
-            'Usage: node process_json_test.js <URL_or_file_path>\n' +
-                'Example: node process_json_test.js https://example.com/inventory.json\n' +
-                '         node process_json_test.js ./fixtures/INVENTORY_C400.json\n'
-        );
+        process.stderr.write(usage());
         process.exit(1);
     }
 
-    const text = await loadInput(source);
-    const { records: rawRecords, parseFailures } = parseCorruptedJsonArray(text);
+    process.stderr.write(`${isHttpUrl(source) ? 'Fetching' : 'Reading'} ${source}\n`);
+    const text = await loadTextSource(source);
 
+    const { records: rawRecords, parseFailures } = parseCorruptedJsonArray(text);
     if (parseFailures > 0) {
         process.stderr.write(`Note: ${parseFailures} object(s) were unparseable and dropped.\n`);
     }
 
-    const { output, stats } = processRecords(rawRecords);
+    const { output, stats } = processInventoryRecords(rawRecords);
 
-    fs.writeFileSync(OUTPUT_FILE, JSON.stringify(output, null, 2));
-    process.stderr.write(`Wrote ${output.length} record(s) to ${path.resolve(OUTPUT_FILE)}\n`);
+    fs.writeFileSync(outputFile, JSON.stringify(output, null, 2));
+    process.stderr.write(`Wrote ${output.length} record(s) to ${path.resolve(outputFile)}\n`);
 
-    printSummary(stats);
+    process.stdout.write(formatSummary(stats));
 }
 
 if (require.main === module) {
@@ -105,4 +65,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { main, fetchUrl, loadInput };
+module.exports = { main, formatSummary };
